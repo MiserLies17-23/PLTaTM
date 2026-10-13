@@ -124,13 +124,17 @@
                 if (c == '.')
                 {
                     int start = i;
-                    while (i < line.Length && char.IsLetter(c))
-                        i++;
+                    while (i < line.Length && (char.IsLetter(line[i]) || line[i] == '.'))
+                    {
+                        i++; 
+                    }
 
-                    if (line[i + 1] != '.')
-                        throw new Exception($"Операция не закрыта '.'");
-
-                    string text = line[start..i++];
+                    if (line[i - 1] != '.')
+                    {
+                        throw new Exception($"Операция не закрыта '.' {line[start..i]}");
+                    }
+                    string text = line[start..i];
+                    
                     if (BinOps.TryGetValue(text, out var bOpType))
                     {
                         tokens.Add(new Token(bOpType, text, start));
