@@ -1,4 +1,6 @@
-﻿namespace PLTaTM
+﻿using PLTaTM.Grammer.Symbols;
+
+namespace PLTaTM.LexicalAnalyzer
 {
     /// <summary>
     /// Класс лексического анализатора
@@ -115,7 +117,7 @@
 
                     string text = line[start..i];
                     if (!Consts.TryGetValue(text, out var ct))
-                        throw new Exception($"Неизвестная константа '{text}' в позиции {start}");
+                        throw new Exception($"Неизвестная константа '{text}' в позиции {start}"); // Заменить на LexicalException!
 
                     tokens.Add(new Token(ct, text, start));
                     continue;

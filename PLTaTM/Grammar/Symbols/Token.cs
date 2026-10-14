@@ -1,4 +1,4 @@
-﻿namespace PLTaTM
+﻿namespace PLTaTM.Grammer.Symbols
 {
     /// <summary>
     /// Перечисление зарезрвированных системой символов
