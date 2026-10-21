@@ -1,0 +1,8 @@
+﻿var x, y :logical;
+begin
+    read(x);
+    x = 1;
+    write(y);
+    repeat read(x); until .Not. ( x .and. y .or. 1 );
+    write ( x );
+end

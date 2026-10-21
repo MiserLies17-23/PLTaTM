@@ -1,4 +1,5 @@
-﻿using PLTaTM.Grammer;
+﻿using PLTaTM.Exceptions;
+using PLTaTM.Grammer;
 using PLTaTM.Grammer.Symbols;
 
 namespace PLTaTM.SyntaxAnalyzer
@@ -7,6 +8,7 @@ namespace PLTaTM.SyntaxAnalyzer
     {
         private readonly ParserTable _table;
         private readonly List<Symbol> _stack = [];
+        private readonly List<int> _stateStack = [];
         private IReadOnlyList<Token> _tokens = [];
         private int _pos;
 
@@ -17,34 +19,50 @@ namespace PLTaTM.SyntaxAnalyzer
             _tokens = tokens;
             _pos = 0;
             _stack.Clear();
+            _stateStack.Clear();
+            
+            _stateStack.Add(0); // Начальное состояние
 
-            while (_pos < _tokens.Count)
+            while (true)
             {
-                var token = _tokens[_pos];
-                var action = FindAction(token.Type);
+                int currentState = _stateStack[^1];
+                var currentTokenType = _pos < _tokens.Count ? _tokens[_pos].Type : TokenType.Eof;
 
-                switch (action.Kind)
+                if (!_table.Action.TryGetValue((currentState, currentTokenType), out var action))
                 {
-                    case ActionKind.Shift:
-                        Shift(token);
-                        break;
+                    string errorMsg;
+                    if (_pos < _tokens.Count)
+                    {
+                        var badToken = _tokens[_pos];
+                        errorMsg = $"Синтаксическая ошибка: неожиданный токен '{badToken.Value}' (тип: {badToken.Type}) на позиции {badToken.Position}.";
+                    }
+                    else
+                    {
+                        errorMsg = "Синтаксическая ошибка: неожиданный конец файла (Eof).";
+                    }
 
-                    case ActionKind.Reduce:
-                        Reduce(action.RuleNumber);
-                        break;
-
-                    case ActionKind.Accept:
-                        return true;
+                    throw new SyntaxException(errorMsg);
                 }
+
+                if (action.Kind == ActionKind.Accept)
+                    return true;
+
+                if (action.Kind == ActionKind.Shift)
+                {
+                    Shift(_tokens[_pos], action.RuleNumber); 
+                    _pos++;
+                }
+                else if (action.Kind == ActionKind.Reduce)
+                {
+                    Reduce(action.RuleNumber);                 }
             }
-            return false;
         }
 
         // считывание
-        private void Shift(Token token)
+        private void Shift(Token token, int nextState)
         {
             _stack.Add(Symbol.Of(token.Type));
-            _pos++;
+            _stateStack.Add(nextState); 
         }
 
         // свёртка
@@ -53,47 +71,17 @@ namespace PLTaTM.SyntaxAnalyzer
             var rule = _table.GetRule(ruleNumber);
 
             for (int i = 0; i < rule.RightLength; i++)
+            {
                 _stack.RemoveAt(_stack.Count - 1);
+                _stateStack.RemoveAt(_stateStack.Count - 1);
+            }
 
             _stack.Add(Symbol.Of(rule.Left));
-        }
 
-        // Действия
-        private ParserAction FindAction(TokenType token)
-        {
-            foreach (var rule in _table.Rules)
-            {
-                if (!_table.TryGetAction(rule.Number, token, out var action))
-                    continue;
-                if (!RhsMatches(rule))
-                    continue;
-                return action;
-            }
+            int newTopState = _stateStack[^1];
+            int nextState = _table.Goto[(newTopState, rule.Left)];
 
-            // Если ни одна свёртка не подошла — перенос
-            return new ParserAction(ActionKind.Shift);
-        }
-
-        private bool RhsMatches(Rule rule)
-        {
-            if (_stack.Count < rule.RightLength) return false;
-
-            int offset = _stack.Count - rule.RightLength;
-            for (int i = 0; i < rule.RightLength; i++)
-            {
-                var want = rule.Right[i];
-                var have = _stack[offset + i];
-
-                if (want.Nt is { } nt)
-                {
-                    if (have.Nt != nt) return false;
-                }
-                else if (want.Tk is { } tk)
-                {
-                    if (have.Tk != tk) return false;
-                }
-            }
-            return true;
+            _stateStack.Add(nextState);
         }
     }
 }

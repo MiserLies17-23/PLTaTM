@@ -6,21 +6,9 @@
         public static Symbol Of(TokenType tk) => new(null, tk);
     }
 
+
     public enum NonTerminal
     {
-        I,
-        A,
-        B,
-        C,
-        D,
-        E,
-        F,
-        G,
-        G1,
-        G2,
-        G3,
-        K,
-        M,
-        N
+        I, A, B, C, D, E, F, G, G1, G2, G3, P, N, M
     }
 }

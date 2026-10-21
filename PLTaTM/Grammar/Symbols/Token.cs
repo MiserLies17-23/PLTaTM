@@ -25,7 +25,8 @@
         ReadOp,
         WriteOp,
         ZeroConst,
-        OneConst
+        OneConst,
+        Eof
     }
 
     /// <summary>

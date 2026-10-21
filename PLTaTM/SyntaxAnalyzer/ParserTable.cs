@@ -17,6 +17,7 @@ namespace PLTaTM.SyntaxAnalyzer
     {
         public required IReadOnlyList<Rule> Rules { get; init; }
         public required IReadOnlyDictionary<(int Rule, TokenType Token), ParserAction> Action { get; init; }
+        public required IReadOnlyDictionary<(int, NonTerminal), int> Goto {  get; init; }
         public Rule GetRule(int number) => Rules[number];
         public bool TryGetAction(int rule, TokenType token, out ParserAction action)
             => Action.TryGetValue((rule, token), out action!);

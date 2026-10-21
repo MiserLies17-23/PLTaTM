@@ -1,4 +1,5 @@
-﻿using PLTaTM.Grammer.Symbols;
+﻿using PLTaTM.Errors;
+using PLTaTM.Grammer.Symbols;
 
 namespace PLTaTM.LexicalAnalyzer
 {
@@ -10,7 +11,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь ключевых слов
         /// </summary>
-        private static readonly Dictionary<string, TokenType> Keywords = new()
+        private static readonly Dictionary<string, TokenType> Keywords = new(StringComparer.OrdinalIgnoreCase)
         {
             ["var"] = TokenType.KeywordVar,
             ["logical"] = TokenType.KeywordLogical,
@@ -21,7 +22,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь операторов
         /// </summary>
-        private static readonly Dictionary<string, TokenType> Operators = new()
+        private static readonly Dictionary<string, TokenType> Operators = new(StringComparer.OrdinalIgnoreCase)
         {
             ["="] = TokenType.Assign,
             [":"] = TokenType.Colon,
@@ -34,7 +35,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь бинарных операций
         /// </summary>
-        private static readonly Dictionary<string, TokenType> BinOps = new()
+        private static readonly Dictionary<string, TokenType> BinOps = new(StringComparer.OrdinalIgnoreCase)
         {
             [".and."] = TokenType.BinAnd,
             [".or."] = TokenType.BinOr,
@@ -44,7 +45,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь унарных операций
         /// </summary>
-        private static readonly Dictionary<string, TokenType> UnOps = new()
+        private static readonly Dictionary<string, TokenType> UnOps = new(StringComparer.OrdinalIgnoreCase)
         {
             [".not."] = TokenType.UnNot,
         };
@@ -52,7 +53,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь констант
         /// </summary>
-        private static readonly Dictionary<string, TokenType> Consts = new() 
+        private static readonly Dictionary<string, TokenType> Consts = new(StringComparer.OrdinalIgnoreCase) 
         { 
             ["0"] = TokenType.ZeroConst,
             ["1"] = TokenType.OneConst,
@@ -61,7 +62,7 @@ namespace PLTaTM.LexicalAnalyzer
         /// <summary>
         /// Словарь пользовательских операций (соответствуют варианту)
         /// </summary>
-        private static readonly Dictionary<string, TokenType> Operations = new()
+        private static readonly Dictionary<string, TokenType> Operations = new(StringComparer.OrdinalIgnoreCase)
         {
             ["repeat"] = TokenType.RepeatOp,
             ["until"] = TokenType.UntilOp,
@@ -117,7 +118,7 @@ namespace PLTaTM.LexicalAnalyzer
 
                     string text = line[start..i];
                     if (!Consts.TryGetValue(text, out var ct))
-                        throw new Exception($"Неизвестная константа '{text}' в позиции {start}"); // Заменить на LexicalException!
+                        throw new LexicalException($"Лексическая ошибка: Неизвестная константа '{text}' в позиции {start}");
 
                     tokens.Add(new Token(ct, text, start));
                     continue;
@@ -126,28 +127,35 @@ namespace PLTaTM.LexicalAnalyzer
                 if (c == '.')
                 {
                     int start = i;
-                    while (i < line.Length && (char.IsLetter(line[i]) || line[i] == '.'))
+                    i++;
+
+                    while (i < line.Length && char.IsLetter(line[i]))
                     {
-                        i++; 
+                        i++;
                     }
 
-                    if (line[i - 1] != '.')
+                    if (i >= line.Length || line[i] != '.')
                     {
-                        throw new Exception($"Операция не закрыта '.' {line[start..i]}");
+                        throw new LexicalException($"Лексическая ошибка: Операция не закрыта '.' в позиции {start}");
                     }
+
+                    i++;
                     string text = line[start..i];
-                    
-                    if (BinOps.TryGetValue(text, out var bOpType))
+
+                    string lowerText = text.ToLowerInvariant();
+
+                    if (BinOps.TryGetValue(lowerText, out var bOpType))
                     {
                         tokens.Add(new Token(bOpType, text, start));
                         continue;
                     }
-                    if (UnOps.TryGetValue(text, out var uOpType))
+                    if (UnOps.TryGetValue(lowerText, out var uOpType))
                     {
                         tokens.Add(new Token(uOpType, text, start));
                         continue;
                     }
-                    throw new Exception($"Неизвестная операция");                    
+
+                    throw new LexicalException($"Лексическая ошибка: Неизвестная операция '{text}' в позиции {start}");
                 }
 
                 if (Operators.TryGetValue(c.ToString(), out var singleOp))
@@ -156,8 +164,21 @@ namespace PLTaTM.LexicalAnalyzer
                     i++;
                     continue;
                 }
+                
+                if (c == ':')
+                {
+                    i++;
+                    continue;
+                }
 
-                throw new Exception($"Неизвестный символ '{c}' в позиции {i}");
+                if (Operators.TryGetValue(c.ToString(), out var single))
+                {
+                    tokens.Add(new Token(single, c.ToString(), i));
+                    i++;
+                    continue;
+                }
+
+                throw new LexicalException($"Лексическая ошибка: Неизвестный символ '{c}' в позиции {i}");
             }
 
             return tokens;

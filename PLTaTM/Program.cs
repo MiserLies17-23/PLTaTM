@@ -1,23 +1,26 @@
-﻿using PLTaTM.Grammer;
-using PLTaTM.LexicalAnalyzer;
+﻿using PLTaTM.LexicalAnalyzer;
 using PLTaTM.SyntaxAnalyzer;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
-        LexicalAnalyzer lAnalyzer = new LexicalAnalyzer();
-        
-        //ParserTable pt = new ParserTable(Grammar.Rules, );
-        //SyntaxAnalyzer sAnalyzer = new SyntaxAnalyzer(new ParserTable(Grammar.Rules));
-        
-        Console.WriteLine("Напишите фрагмент кода: ");
-        var line = Console.ReadLine();
-
-        var tokens = lAnalyzer.Analyze(line);
-        foreach (var token in tokens)
+        try
         {
-            Console.WriteLine($"{token.Value} - {token.Type.ToString()}");
+            LexicalAnalyzer lAnalyzer = new LexicalAnalyzer();
+            SyntaxAnalyzer sAnalyzer = new SyntaxAnalyzer(ManualParserTable.Create());
+
+            string path = "C:\\Users\\THUNDEROBOT\\source\\repos\\PLTaTM\\PLTaTM\\code.txt";
+
+            string fileText = File.ReadAllText(path);
+            bool flag = sAnalyzer.Parse(lAnalyzer.Analyze(fileText));
+            string msg = flag ? "Синтаксический анализ успешно завершён!"
+                : "Синтаксический анализ завершился с ошибкой";
+            Console.WriteLine(msg);
+        }
+        catch (Exception ex) 
+        { 
+            Console.WriteLine(ex.Message);
         }
     }
 }
